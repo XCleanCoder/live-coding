@@ -1,0 +1,74 @@
+# Problem 1: Build a crypto order book
+
+Implement an aggregated order book for a crypto trading pair such as BTC/USDT.
+
+The order book receives a snapshot and incremental updates.
+
+```python
+snapshot = {
+    "sequence": 100,
+    "bids": [
+        ("100.00", "1.50"),
+        ("99.50", "2.00"),
+    ],
+    "asks": [
+        ("100.50", "1.00"),
+        ("101.00", "3.00"),
+    ],
+}
+
+updates = [
+    {
+        "sequence": 101,
+        "side": "bid",
+        "price": "100.00",
+        "quantity": "2.00",
+    },
+    {
+        "sequence": 102,
+        "side": "ask",
+        "price": "100.50",
+        "quantity": "0",
+    },
+]
+```
+
+## Implement
+
+```python
+class OrderBook:
+    def load_snapshot(self, snapshot):
+        pass
+
+    def apply_update(self, update):
+        pass
+
+    def best_bid(self):
+        pass
+
+    def best_ask(self):
+        pass
+
+    def mid_price(self):
+        pass
+
+    def spread(self):
+        pass
+```
+
+## Requirements
+
+- Bids must be ordered from highest to lowest price.
+- Asks must be ordered from lowest to highest price.
+- Quantity `0` removes the price level.
+- Reject duplicate updates.
+- Detect missing sequence numbers.
+- Do **not** use floating-point arithmetic for prices or quantities.
+- Return `None` if a best bid or ask is unavailable.
+
+Python’s `decimal` module is suitable for exact decimal calculations.
+
+## Notes
+
+This is a write-only exercise. You do not need to run the code in this platform.
+Focus on correctness, sequence handling, and clear structure.

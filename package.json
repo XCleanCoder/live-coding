@@ -1,0 +1,16 @@
+{
+  "name": "live-coding",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/problems"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w api & npm run dev -w web",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run dev -w api",
+    "seed": "npm run seed -w api",
+    "build": "npm run build -w web && npm run build -w api"
+  }
+}

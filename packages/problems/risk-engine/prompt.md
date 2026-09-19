@@ -1,0 +1,70 @@
+# Problem 2: Implement a pre-trade risk engine
+
+Create a risk-checking service that decides whether an order can be submitted.
+
+```python
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Literal
+
+@dataclass
+class Order:
+    order_id: str
+    symbol: str
+    side: Literal["BUY", "SELL"]
+    quantity: Decimal
+    limit_price: Decimal
+    reduce_only: bool = False
+
+@dataclass
+class Account:
+    available_quote: Decimal
+    base_position: Decimal
+    max_order_notional: Decimal
+    max_position: Decimal
+```
+
+## Implement
+
+```python
+def validate_order(
+    order: Order,
+    account: Account,
+    current_price: Decimal,
+) -> tuple[bool, str]:
+    ...
+```
+
+## Rules
+
+Reject the order when:
+
+- Quantity is zero or negative.
+- Price is zero or negative.
+- The order notional exceeds `max_order_notional`.
+- A buy order requires more quote currency than available.
+- A sell order exceeds the available position.
+- The resulting position exceeds `max_position`.
+- The order price is too far from the current market price (**reject if more than 5% away from `current_price`**).
+- The market price is stale or unavailable (`current_price` is `None` or `<= 0`).
+
+Return:
+
+- `(True, "ACCEPTED")` on success
+- `(False, "<REASON_CODE>")` on rejection
+
+Suggested reason codes:
+
+- `INVALID_QUANTITY`
+- `INVALID_PRICE`
+- `MAX_ORDER_NOTIONAL_EXCEEDED`
+- `INSUFFICIENT_QUOTE_BALANCE`
+- `INSUFFICIENT_BASE_POSITION`
+- `MAX_POSITION_EXCEEDED`
+- `PRICE_BAND_EXCEEDED`
+- `STALE_OR_MISSING_MARKET_PRICE`
+
+## Notes
+
+This is a write-only exercise. You do not need to run the code in this platform.
+Prefer clear reason codes and safe defaults (deny when information is missing).

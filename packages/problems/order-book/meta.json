@@ -1,0 +1,7 @@
+{
+  "title": "Build a crypto order book",
+  "order": 1,
+  "timeboxMinutes": 45,
+  "languages": ["py"],
+  "summary": "Aggregated order book with snapshot, incremental updates, and best bid/ask."
+}

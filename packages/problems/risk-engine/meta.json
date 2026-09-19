@@ -1,0 +1,7 @@
+{
+  "title": "Implement a pre-trade risk engine",
+  "order": 2,
+  "timeboxMinutes": 25,
+  "languages": ["py"],
+  "summary": "Validate orders against balances, position limits, notional caps, and price bands."
+}
