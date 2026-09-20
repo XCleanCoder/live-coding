@@ -1,0 +1,93 @@
+name: Build Offline Exam Apps
+
+on:
+  # Manual run from GitHub → Actions → "Run workflow"
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Public API URL baked into the apps (leave empty to use secret VITE_API_BASE)"
+        required: false
+        type: string
+  # Optional: build when you push a version tag, e.g. git tag v0.1.1 && git push --tags
+  push:
+    tags:
+      - "v*"
+
+defaults:
+  run:
+    working-directory: Offline version
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            dist_script: dist:win
+            artifact_name: offline-windows
+          - os: macos-latest
+            dist_script: dist:mac
+            artifact_name: offline-macos
+          - os: ubuntu-latest
+            dist_script: dist:linux
+            artifact_name: offline-linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: Offline version/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve API base URL
+        id: api
+        shell: bash
+        run: |
+          URL="${{ github.event.inputs.api_base_url }}"
+          if [ -z "$URL" ]; then
+            URL="${{ secrets.VITE_API_BASE }}"
+          fi
+          if [ -z "$URL" ]; then
+            echo "::error::Set secret VITE_API_BASE (or pass api_base_url when running manually)."
+            exit 1
+          fi
+          # strip trailing slash
+          URL="${URL%/}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Using API: $URL"
+
+      - name: Write runtime config.json
+        shell: bash
+        run: |
+          node -e "const fs=require('fs'); fs.writeFileSync('resources/config.json', JSON.stringify({ apiBaseUrl: process.env.URL }, null, 2) + '\n');"
+        env:
+          URL: ${{ steps.api.outputs.url }}
+
+      - name: Build installer
+        run: npm run ${{ matrix.dist_script }}
+        env:
+          VITE_API_BASE: ${{ steps.api.outputs.url }}
+          # Avoid interactive electron-builder prompts in CI
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            Offline version/release/*.{exe,dmg,AppImage,yml,yaml,blockmap}
+            Offline version/release/**/*.exe
+            Offline version/release/**/*.dmg
+            Offline version/release/**/*.AppImage
+          if-no-files-found: warn
+          retention-days: 14

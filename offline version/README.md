@@ -88,6 +88,34 @@ npm run dist:all   # when your CI/machine supports all targets
 
 ---
 
+## GitHub Actions (recommended for multi-OS)
+
+Workflow file: `.github/workflows/offline-desktop.yml`
+
+### What you should do
+
+1. **Commit & push** this repo (including the workflow) to GitHub: `XCleanCoder/live-coding`
+2. Open GitHub → **Settings → Secrets and variables → Actions** → **New repository secret**
+   - Name: `VITE_API_BASE`
+   - Value: public API URL candidates can reach  
+     e.g. `https://api.your-company.com`  
+     (LAN test only: `http://69.194.3.163:8787`)
+3. Open **Actions** → **Build Offline Exam Apps** → **Run workflow**
+4. When green, download artifacts:
+   - `offline-windows`
+   - `offline-macos`
+   - `offline-linux`
+5. Send the right file to each candidate (they just run it — no env setup)
+
+Optional auto-build on version tag:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+---
+
 ## API endpoints used
 
 - `GET  /api/health`
