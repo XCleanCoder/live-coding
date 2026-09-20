@@ -284,6 +284,28 @@ button:disabled {
   color: var(--warn);
 }
 
+.info-chip {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.info-chip.ok {
+  border-color: rgba(62, 207, 142, 0.4);
+  background: rgba(62, 207, 142, 0.1);
+  color: var(--ok);
+}
+
+.info-chip.warn {
+  border-color: rgba(240, 180, 41, 0.45);
+  background: rgba(240, 180, 41, 0.1);
+  color: var(--warn);
+}
+
 .error {
   color: var(--danger);
   margin: 0;

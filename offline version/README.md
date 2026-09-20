@@ -1,82 +1,97 @@
 # Live Coding Offline Exam
 
-Electron desktop app for offline coding exams. Candidates register, accept exam rules, then complete Python problems in a secured Monaco editor while the app heartbeats to the API.
+Electron desktop exam app. Candidates only enter **name + email** — no OS-specific setup.
 
-## Prerequisites
+Problems, timer, and security rules are built into the app. Internet is required only to talk to your exam API (heartbeat / submit / optional camera snapshot).
 
-- Node.js 20+
-- macOS (primary target)
-- API server at `http://localhost:8787` (or set `VITE_API_BASE`)
+## Candidate experience (production)
 
-## Run (development)
+1. Receive ZIP / DMG / AppImage for their OS  
+2. Open the app  
+3. Type name + email → agree to rules → take the exam  
+
+They do **not** configure API URLs, ports, or environment variables.
+
+---
+
+## How production “just works”
+
+You (admin) set the API address **once when packaging**, then ship the same binary to everyone.
+
+| Layer | Purpose |
+|--------|---------|
+| `VITE_API_BASE` at build time | Baked into the UI (primary) |
+| `resources/config.json` | Shipped inside the app; override without code changes |
+| Optional `config.json` next to `.exe` | Ops override for portable Windows |
+
+Priority at runtime: **file next to exe → packaged resources config → baked `VITE_API_BASE`**.
+
+### Release checklist (do this before sending to candidates)
 
 ```bash
 cd "Offline version"
-npm install
-npm run start
+
+# 1) Point to your public HTTPS API (candidates must reach this)
+export VITE_API_BASE=https://api.your-company.com
+
+# 2) Same URL in packaged config (optional but recommended)
+# edit resources/config.json → { "apiBaseUrl": "https://api.your-company.com" }
+
+# 3) Build per OS
+npm run dist:win    # portable .exe + installer
+npm run dist:mac    # .dmg
+npm run dist:linux  # .AppImage
 ```
 
-This starts Vite on port **5174** and launches Electron once the dev server is ready.
+Ship the files from `release/`. Candidates only need a normal internet connection.
 
-Alternative:
+### Local development
 
 ```bash
-npm run dev      # Vite only
-npm run electron # Electron only (after dev server is up)
+cp .env.example .env   # VITE_API_BASE=http://localhost:8787
+npm run start          # needs API on :8787
 ```
 
-## Configuration
+---
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_API_BASE` | `http://localhost:8787` | API base URL for session, heartbeat, snapshot, submit |
+## Robustness built in
 
-Create a `.env` file to override:
+- Connection check on the registration screen (blocks start if API unreachable)
+- Automatic retries + timeouts on network calls
+- Friendly offline / timeout errors
+- Heartbeat presence for admin **Offline app manager**
+- Same security rules on every OS (clipboard, focus, multi-monitor; camera optional)
 
+---
+
+## Package commands
+
+```bash
+npm install
+npm run dist:mac
+npm run dist:win
+npm run dist:linux
+npm run dist:all   # when your CI/machine supports all targets
 ```
-VITE_API_BASE=http://localhost:8787
-```
 
-## Exam flow
+| OS | Artifact |
+|----|----------|
+| Windows | `*-portable.exe` (recommended) or NSIS installer |
+| macOS | `.dmg` |
+| Linux | `.AppImage` |
 
-1. **Registration** — name + email (required), optional camera (off by default)
-2. **Rules** — mandatory security rules; agree to start
-3. **Exam** — 90-minute timer, two Python problems (`order-book`, `risk-engine`)
-4. **Closing** — 3-second countdown, then quit button (Electron)
+### Notes
 
-## Security
+- Prefer building each OS on that OS (or GitHub Actions matrix).
+- macOS Gatekeeper: unsigned builds need Right-click → Open once.
+- Windows SmartScreen may warn on unsigned `.exe` — “More info → Run anyway” until you code-sign.
 
-Always enabled (camera is optional):
+---
 
-- Clipboard / context menu blocked
-- Fullscreen + focus guard (tab/window switch blocked)
-- Multi-monitor detection
-- **Dev bypass:** press `Insert` to toggle focus guard
+## API endpoints used
 
-## API endpoints
-
+- `GET  /api/health`
 - `POST /api/offline/sessions`
 - `POST /api/offline/sessions/:id/heartbeat`
 - `POST /api/offline/sessions/:id/snapshot`
 - `POST /api/offline/sessions/:id/submit`
-
-## Build
-
-```bash
-npm run build
-```
-
-Type-checks with `tsc -b` and bundles the renderer to `dist/`.
-
-## Project layout
-
-```
-Offline version/
-  electron/main.cjs      # Electron main process (single-instance lock)
-  electron/preload.cjs   # Preload bridge (quit)
-  src/App.tsx            # Candidate flow + exam UI
-  src/api.ts             # Offline API client
-  src/security.ts        # Fullscreen, clipboard, display checks
-  src/examPack.ts        # Embedded problems from samples/*.txt
-  src/styles.css
-```

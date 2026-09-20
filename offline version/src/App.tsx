@@ -1,12 +1,14 @@
 import Editor from "@monaco-editor/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  checkApiHealth,
   createOfflineSession,
   sendOfflineHeartbeat,
   submitOfflineAnswers,
   uploadOfflineSnapshot,
   type OfflineSession,
 } from "./api";
+import { getApiBaseUrl } from "./runtimeConfig";
 import { OFFLINE_EXAM, type OfflineProblem } from "./examPack";
 import {
   detectMultipleDisplays,
@@ -95,6 +97,9 @@ export function App() {
   const [focusWarning, setFocusWarning] = useState<string | null>(null);
   const [focusGuardEnabled, setFocusGuardEnabled] = useState(true);
   const [needsFullscreenClick, setNeedsFullscreenClick] = useState(false);
+  const [apiReady, setApiReady] = useState<boolean | null>(null);
+  const [apiBaseLabel, setApiBaseLabel] = useState<string>("");
+  const [checkingApi, setCheckingApi] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const sourcesRef = useRef(sources);
@@ -515,8 +520,43 @@ export function App() {
     localStorage.setItem(storageKey(activeProblem.id, language), next);
   }
 
+  useEffect(() => {
+    let cancelled = false;
+    async function probe() {
+      setCheckingApi(true);
+      try {
+        const base = await getApiBaseUrl();
+        if (!cancelled) setApiBaseLabel(base);
+        await checkApiHealth();
+        if (!cancelled) {
+          setApiReady(true);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setApiReady(false);
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Could not reach the exam server. You need internet to start.",
+          );
+        }
+      } finally {
+        if (!cancelled) setCheckingApi(false);
+      }
+    }
+    void probe();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function canProceedFromRegister(): boolean {
-    return candidateName.trim().length > 0 && candidateEmail.trim().includes("@");
+    return (
+      candidateName.trim().length > 0 &&
+      candidateEmail.trim().includes("@") &&
+      apiReady === true
+    );
   }
 
   if (blockedReason) {
@@ -540,6 +580,17 @@ export function App() {
           <p className="eyebrow">Live Coding Exam</p>
           <h1>Candidate registration</h1>
           <p className="hint">Enter your details before reviewing the exam rules.</p>
+
+          <div className={`info-chip ${apiReady ? "ok" : apiReady === false ? "warn" : ""}`}>
+            {checkingApi && "Checking exam server connection…"}
+            {!checkingApi && apiReady === true && `Connected to exam server`}
+            {!checkingApi && apiReady === false && "Cannot reach exam server — internet required"}
+            {apiBaseLabel ? (
+              <span className="hint" style={{ display: "block", marginTop: "0.35rem" }}>
+                {apiBaseLabel}
+              </span>
+            ) : null}
+          </div>
 
           <label className="field-label">
             Full name
@@ -579,7 +630,7 @@ export function App() {
           <button
             type="button"
             className="btn-primary"
-            disabled={!canProceedFromRegister()}
+            disabled={!canProceedFromRegister() || checkingApi}
             onClick={() => {
               setError(null);
               setPhase("rules");
@@ -587,6 +638,29 @@ export function App() {
           >
             Continue to rules
           </button>
+          {apiReady === false && (
+            <button
+              type="button"
+              className="btn-ghost"
+              disabled={checkingApi}
+              onClick={() => {
+                setCheckingApi(true);
+                void checkApiHealth()
+                  .then(async () => {
+                    setApiReady(true);
+                    setApiBaseLabel(await getApiBaseUrl());
+                    setError(null);
+                  })
+                  .catch((err) => {
+                    setApiReady(false);
+                    setError(err instanceof Error ? err.message : "Still offline");
+                  })
+                  .finally(() => setCheckingApi(false));
+              }}
+            >
+              Retry connection
+            </button>
+          )}
         </div>
       </div>
     );

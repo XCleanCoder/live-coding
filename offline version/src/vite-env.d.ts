@@ -10,7 +10,8 @@ interface ImportMeta {
 
 interface ElectronAPI {
   quit: () => void;
-  isElectron: boolean;
+  isElectron?: boolean;
+  getRuntimeConfig?: () => Promise<{ apiBaseUrl: string }>;
 }
 
 interface Window {
